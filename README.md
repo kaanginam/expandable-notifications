@@ -1,5 +1,7 @@
 # Expandable notifications
 
+DISCLAIMER: This repository was originally posted on the [GNOME GitLab](https://gitlab.gnome.org/) page, however my account has been deleted there so this is a repost to make sure issues can still be created and the code can still be reviewed. Sadly, the history is missing due to this.
+
 This extension makes notification in the notification list expandable. 
 
 ## Requirements
