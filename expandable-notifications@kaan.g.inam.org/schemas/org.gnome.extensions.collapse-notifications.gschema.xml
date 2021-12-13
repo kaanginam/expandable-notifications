@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.expandable-notifications-settings" path="/org/gnome/shell/extensions/expandable-notifications/">
+    <key name="expand-mode" type="s">
+      <default>"CRITICAL"</default>
+      <summary>Mode on how notifications will be expanded</summary>
+      <description>There are three modes to choose from.</description>
+    </key>
+  </schema>
+</schemalist>

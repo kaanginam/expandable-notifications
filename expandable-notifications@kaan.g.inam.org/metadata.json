@@ -1,0 +1,12 @@
+{
+  "name": "Expandable Notifications",
+  "description": "Makes the notifications in the notification list expandable. Using gsettings, you can choose between three modes: AUTO, ARROW and CRITICAL. \nAUTO will expand the notifications in the notification list automatically. \nARROW adds an arrow that lets you choose what to expand or unexpand. \nCRITICAL is similar to arrow, but expands notifications with the urgency critical automatically. \n\nFor more information and an example command to change the mode, I recommend to look at the repository.",
+  "uuid": "expandable-notifications@kaan.g.inam.org",
+  "version": 8,
+  "settings-schema": "org.gnome.shell.extensions.expandable-notifications-settings",
+  "gettext-domain": "expandable-notifications",
+  "url": "https://gitlab.gnome.org/kaanginam/expandable-notifications",
+  "shell-version": [
+    "40", "41"
+  ]
+}
