@@ -7,6 +7,6 @@
   "gettext-domain": "expandable-notifications",
   "url": "https://gitlab.gnome.org/kaanginam/expandable-notifications",
   "shell-version": [
-    "40", "41"
+    "40", "41", "42"
   ]
 }
