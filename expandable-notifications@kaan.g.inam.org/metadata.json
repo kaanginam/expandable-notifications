@@ -7,6 +7,6 @@
   "gettext-domain": "expandable-notifications",
   "url": "https://github.com/kaanginam/expandable-notifications",
   "shell-version": [
-    "40", "41", "42", "43"
+    "40", "41", "42", "43", "44"
   ]
 }
