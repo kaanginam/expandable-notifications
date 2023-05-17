@@ -147,6 +147,7 @@ function _onNotificationAdded(source, notification) {
     let message = notification.createBanner();
     // NotificationBanners are too wide for the notification tray, so they have to be adjusted properly
     message.set_width(31.5);
+    message.add_style_class_name('expandable');
     message.setSecondaryActor(new Calendar.TimeLabel(notification.datetime));
     let isUrgent = notification.urgency == MessageTray.Urgency.CRITICAL;
 
