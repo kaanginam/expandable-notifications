@@ -17,18 +17,129 @@
  */
 
 /* exported init */
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import GObject from 'gi://GObject';
+import Pango from 'gi://Pango';
+import St from 'gi://St';
+import Clutter  from 'gi://Clutter';
+import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
+import * as Calendar from 'resource:///org/gnome/shell/ui/calendar.js';
+import * as MessageList from 'resource:///org/gnome/shell/ui/messageList.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import { formatTimeSpan } from 'resource:///org/gnome/shell/misc/dateUtils.js';
 
-const { St, Clutter, Graphene, Pango } = imports.gi;
-const Calendar = imports.ui.calendar;
-const MessageTray = imports.ui.messageTray;
-const MessageList = imports.ui.messageList;
-const PopupMenu = imports.ui.popupMenu;
-const Main = imports.ui.main;
-const Gettext = imports.gettext.domain(Me.metadata['gettext-domain']);
-const _ = Gettext.gettext;
+import { Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 let _extension;
+// This is a copy from the calendar.js file. This class is needed to overwrite the notification
+// with a datetime label
+const TimeLabel = GObject.registerClass(
+class NotificationTimeLabel extends St.Label {
+    _init(datetime) {
+        super._init({
+            style_class: 'event-time',
+            x_align: Clutter.ActorAlign.START,
+            y_align: Clutter.ActorAlign.END,
+        });
+        this._datetime = datetime;
+    }
+
+    vfunc_map() {
+        this.text = formatTimeSpan(this._datetime);
+        super.vfunc_map();
+    }
+});
+// This is a copy from the messageList.js file. This is needed to create the layout manager
+// for the notification. Both this and the class above are not exported by default.
+const LabelExpanderLayout = GObject.registerClass({
+    Properties: {
+        'expansion': GObject.ParamSpec.double(
+            'expansion', 'Expansion', 'Expansion',
+            GObject.ParamFlags.READABLE | GObject.ParamFlags.WRITABLE,
+            0, 1, 0),
+    },
+}, class LabelExpanderLayout extends Clutter.LayoutManager {
+    _init(params) {
+        this._expansion = 0;
+        this._expandLines = 6;
+
+        super._init(params);
+    }
+
+    get expansion() {
+        return this._expansion;
+    }
+
+    set expansion(v) {
+        if (v === this._expansion)
+            return;
+        this._expansion = v;
+        this.notify('expansion');
+
+        let visibleIndex = this._expansion > 0 ? 1 : 0;
+        for (let i = 0; this._container && i < this._container.get_n_children(); i++)
+            this._container.get_child_at_index(i).visible = i === visibleIndex;
+
+        this.layout_changed();
+    }
+
+    set expandLines(v) {
+        if (v === this._expandLines)
+            return;
+        this._expandLines = v;
+        if (this._expansion > 0)
+            this.layout_changed();
+    }
+
+    vfunc_set_container(container) {
+        this._container = container;
+    }
+
+    vfunc_get_preferred_width(container, forHeight) {
+        let [min, nat] = [0, 0];
+
+        for (let i = 0; i < container.get_n_children(); i++) {
+            if (i > 1)
+                break; // we support one unexpanded + one expanded child
+
+            let child = container.get_child_at_index(i);
+            let [childMin, childNat] = child.get_preferred_width(forHeight);
+            [min, nat] = [Math.max(min, childMin), Math.max(nat, childNat)];
+        }
+
+        return [min, nat];
+    }
+
+    vfunc_get_preferred_height(container, forWidth) {
+        let [min, nat] = [0, 0];
+
+        let children = container.get_children();
+        if (children[0])
+            [min, nat] = children[0].get_preferred_height(forWidth);
+
+        if (children[1]) {
+            let [min2, nat2] = children[1].get_preferred_height(forWidth);
+            const [expMin, expNat] = [
+                Math.min(min2, min * this._expandLines),
+                Math.min(nat2, nat * this._expandLines),
+            ];
+            [min, nat] = [
+                min + this._expansion * (expMin - min),
+                nat + this._expansion * (expNat - nat),
+            ];
+        }
+
+        return [min, nat];
+    }
+
+    vfunc_allocate(container, box) {
+        for (let i = 0; i < container.get_n_children(); i++) {
+            let child = container.get_child_at_index(i);
+
+            if (child.visible)
+                child.allocate(box);
+        }
+    }
+});
 
 function getMode() {
     return _extension.expandMode;
@@ -98,7 +209,7 @@ function applyExtensionToMessage(message) {
             });
             // Re-creating the widget message._bodyStack and adding it to the new box as well as the expand button
             let newWidget = new St.Widget({ x_expand: true, x_align: Clutter.ActorAlign.START });
-            newWidget.layout_manager = new MessageList.LabelExpanderLayout();
+            newWidget.layout_manager = new LabelExpanderLayout();
             let newBodyLabel = new MessageList.URLHighlighter('', false, message._useBodyMarkup);
             newBodyLabel.add_style_class_name('message-body');
             newWidget.add_actor(newBodyLabel);
@@ -148,11 +259,11 @@ function _onNotificationAdded(source, notification) {
     // NotificationBanners are too wide for the notification tray, so they have to be adjusted properly
     message.set_width(31.5);
     message.add_style_class_name('expandable');
-    message.setSecondaryActor(new Calendar.TimeLabel(notification.datetime));
+    message.setSecondaryActor(new TimeLabel(notification.datetime));
     let isUrgent = notification.urgency == MessageTray.Urgency.CRITICAL;
 
     let updatedId = notification.connect('updated', () => {
-        message.setSecondaryActor(new Calendar.TimeLabel(notification.datetime));
+        message.setSecondaryActor(new TimeLabel(notification.datetime));
         this.moveMessage(message, isUrgent ? 0 : this._nUrgent, this.mapped);
     });
 
@@ -292,16 +403,16 @@ let originalUnexpand;
 let _originalOnOpenStateChanged;
 let settingsHandler = null;
 let _onOpenStateChangedSignalId = 0;
-class Extension {
-    constructor(uuid) {
-        this._uuid = uuid;
-        ExtensionUtils.initTranslations(Me.metadata['gettext-domain']);
-    }
+
+export default class ExpandableNotifications extends Extension {
     enable() {
+        _extension = this;
+        let NotificationSection = Main.panel.statusArea.dateMenu._messageList._notificationSection;
+        this._uuid = import.meta.uuid;
         // Enable settings
-        this.settings = ExtensionUtils.getSettings(Me.metadata['settings-schema']);
+        this.settings = this.getSettings()
         // Get original functions
-        _originalOnNotificationAdded = Calendar.NotificationSection.prototype._onNotificationAdded;
+        _originalOnNotificationAdded = NotificationSection._onNotificationAdded;
         originalExpand = MessageList.Message.prototype.expand;
         originalUnexpand = MessageList.Message.prototype.unexpand;
         _originalOnOpenStateChanged = Main.panel.statusArea.dateMenu._onOpenStateChanged;
@@ -313,7 +424,7 @@ class Extension {
         // Replace function called on signal with custom function
         _onOpenStateChangedSignalId = Main.panel.statusArea.dateMenu.menu.connect('open-state-changed', _onOpenStateChanged.bind(Main.panel.statusArea.dateMenu));
         // Replace original functions with new ones
-        Calendar.NotificationSection.prototype._onNotificationAdded = _onNotificationAdded;
+        NotificationSection._onNotificationAdded = _onNotificationAdded;
         MessageList.Message.prototype.expand = expand;
         MessageList.Message.prototype.unexpand = unexpand;
     }
@@ -322,11 +433,11 @@ class Extension {
         Main.panel.statusArea.dateMenu.menu.disconnect(_onOpenStateChangedSignalId);
         Main.panel.statusArea.dateMenu.menu.connect('open-state-changed', _originalOnOpenStateChanged.bind(Main.panel.statusArea.dateMenu));
         // Put back original functions
-        Calendar.NotificationSection.prototype._onNotificationAdded = _originalOnNotificationAdded;
+        NotificationSection._onNotificationAdded = _originalOnNotificationAdded;
         MessageList.Message.prototype.expand = originalExpand;
         MessageList.Message.prototype.unexpand = originalUnexpand;
         this._destroy();
-        this._extension = null;
+        _extension = null;
         this.settings = null;
     }
     _destroy() {
@@ -334,7 +445,7 @@ class Extension {
     }
 }
 
-function init(meta) {
-    _extension = new Extension(meta.uuid);
+export function init(meta) {
+    _extension = new ExpandableNotifications(meta.uuid);
     return _extension;
 }
