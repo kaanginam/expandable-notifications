@@ -1,12 +1,20 @@
 # Expandable notifications
 
-DISCLAIMER: This repository was originally posted on the [GNOME GitLab](https://gitlab.gnome.org/) page, however my account has been deleted there so this is a repost to make sure issues can still be created and the code can still be reviewed. Sadly, the history is missing due to this.
-
 This extension makes notification in the notification list expandable. 
+
+## DISCLAIMER
+
+This repository was originally posted on the [GNOME GitLab](https://gitlab.gnome.org/) page, however my account has been deleted there so this is a repost to make sure issues can still be created and the code can still be reviewed. Sadly, the history is missing due to this.
+
+## Donations
+
+I worked on this extension purely for my Bachelor's thesis, so I'm sorry if it's not well maintained. You can always motivate me through a [donation](https://ko-fi.com/kaanginam), but it's really not a necessity!
+
+When there is something urgent (like a GNOME shell version change), you may also feel free to contact me on [twitter](https://twitter.com/kaanginam).
 
 ## Requirements
 
-This has only been tested on GNOME Shell 40 and 41, hence there is no guarantee this works on any other version.
+Please make sure to use the appropriate extension version when using certain gnome-shell versions! Otherwise there are no requirements.
 
 ## Installation
 
