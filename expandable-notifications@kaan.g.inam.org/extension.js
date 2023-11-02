@@ -403,11 +403,11 @@ let originalUnexpand;
 let _originalOnOpenStateChanged;
 let settingsHandler = null;
 let _onOpenStateChangedSignalId = 0;
-
+let NotificationSection;
 export default class ExpandableNotifications extends Extension {
     enable() {
         _extension = this;
-        let NotificationSection = Main.panel.statusArea.dateMenu._messageList._notificationSection;
+        NotificationSection = Main.panel.statusArea.dateMenu._messageList._notificationSection;
         this._uuid = import.meta.uuid;
         // Enable settings
         this.settings = this.getSettings()
@@ -439,13 +439,9 @@ export default class ExpandableNotifications extends Extension {
         this._destroy();
         _extension = null;
         this.settings = null;
+	NotificationSection = null;
     }
     _destroy() {
         this.settings.disconnect(settingsHandler);
     }
-}
-
-export function init(meta) {
-    _extension = new ExpandableNotifications(meta.uuid);
-    return _extension;
 }
